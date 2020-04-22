@@ -62,11 +62,14 @@ const theme = createMuiTheme({
 
 export default function LoginPage() {
   const classes = useStyles();
-  const { signIn, user, isAuthReady } = useAppState();
+  const { signIn, user, isAuthReady, sendOtp } = useAppState();
   const history = useHistory();
   const location = useLocation<{ from: Location }>();
   const [passcode, setPasscode] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [authError, setAuthError] = useState<Error | null>(null);
+
+  const [showVerify, setShowVerify] = useState(false);
 
   const isAuthEnabled = Boolean(process.env.REACT_APP_SET_AUTH);
 
@@ -82,6 +85,17 @@ export default function LoginPage() {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     login();
+  };
+
+  const handlePhoneSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    sendOtp?.(phoneNumber)
+      .then(() => {
+        setShowVerify(true);
+      })
+      .catch(err => {
+        console.log(err);
+      });
   };
 
   if (user || !isAuthEnabled) {
@@ -103,6 +117,57 @@ export default function LoginPage() {
             <Button variant="contained" className={classes.button} onClick={login} startIcon={<GoogleLogo />}>
               Sign in with Google
             </Button>
+          )}
+
+          {process.env.REACT_APP_SET_AUTH === 'verify' && (
+            <div>
+              {!showVerify && (
+                <form onSubmit={handlePhoneSubmit}>
+                  <Grid container alignItems="center" direction="column">
+                    <TextField
+                      id="input-phone"
+                      label="Phone number"
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setPhoneNumber(e.target.value)}
+                      type="text"
+                    />
+                    <div>
+                      {authError && (
+                        <Typography variant="caption" className={classes.errorMessage}>
+                          <ErrorOutlineIcon />
+                          {authError.message}
+                        </Typography>
+                      )}
+                    </div>
+                    <Button variant="contained" className={classes.button} type="submit" disabled={!phoneNumber.length}>
+                      Send Code
+                    </Button>
+                  </Grid>
+                </form>
+              )}
+              {showVerify && (
+                <form onSubmit={handleSubmit}>
+                  <Grid container alignItems="center" direction="column">
+                    <TextField
+                      id="input-passcode"
+                      label="Code"
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setPasscode(e.target.value)}
+                      type="text"
+                    />
+                    <div>
+                      {authError && (
+                        <Typography variant="caption" className={classes.errorMessage}>
+                          <ErrorOutlineIcon />
+                          {authError.message}
+                        </Typography>
+                      )}
+                    </div>
+                    <Button variant="contained" className={classes.button} type="submit" disabled={!passcode.length}>
+                      Submit
+                    </Button>
+                  </Grid>
+                </form>
+              )}
+            </div>
           )}
 
           {process.env.REACT_APP_SET_AUTH === 'passcode' && (
